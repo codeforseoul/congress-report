@@ -8,44 +8,153 @@ import requests
 import os
 import datetime
 import time
+import glob
 
 attend_meta = dict()
 attend_meta['result_dir'] = 'result';
-attend_meta['crawling_url'] = 'http://watch.peoplepower21.org/New/c_monitor_attend.php?page=';
+attend_meta['crawling_list_url'] = 'http://watch.peoplepower21.org/New/c_monitor_attend.php?page=';
+attend_meta['crawling_attend_url'] = 'http://watch.peoplepower21.org/New/c_monitor_attend_detail.php?meeting_seq=';
 attend_meta['assembly_id_src'] = ''
 attend_meta['target_id_set'] = [];
 
-def init():
+#temporary value
+CRAWILING_THRESHOLD = 100;
+
+#???? what is best way to define model in py ...
+def get_recent_meeting_inform():
+	recent_meeting = dict();
+	recent_meeting['date_str'] = recent_meeting['date'] = recent_meeting['id'] = recent_meeting['summary'] = recent_meeting['content_url'] = None;
+
+	r = requests.get(attend_meta['crawling_list_url']+'1')
+	r.encoding = 'UTF-8'
+	soup = BeautifulSoup(r.text.encode('UTF-8'),'html.parser')
+	targetTrs = soup.findAll('tr',attrs={'bgcolor':'#FFFFFF'})
+
+	if len(targetTrs) > 0 :
+		targetTr = targetTrs[0]
+		tds = targetTr.findAll('td');
+		if len(tds) == 3 :
+			recent_meeting['date_str'] = tds[0].text.encode('UTF-8').strip()
+			recent_meeting['date'] = convert_str_time_to_long(recent_meeting['date_str'])
+			recent_meeting['id'] = tds[1].text.encode('UTF-8')
+			recent_meeting['summary'] = tds[2].text.encode('UTF-8')
+			recent_meeting['content_url'] = tds[0].find('a')['href']
+
+
+	return recent_meeting;
+
+
+
+def get_meetings_by_page_num(page_num):
+
+	meettings = [];
+
+	r = requests.get(attend_meta['crawling_list_url']+str(page_num))
+	r.encoding = 'UTF-8'
+	soup = BeautifulSoup(r.text.encode('UTF-8'),'html.parser')
+	targetTrs = soup.findAll('tr',attrs={'bgcolor':'#FFFFFF'})
+
+	for targetTr in targetTrs :
+		tds = targetTr.findAll('td');
+		if len(tds) == 3 :
+			recent_meeting = dict();
+			recent_meeting['date_str'] = tds[0].text.encode('UTF-8').strip()
+			recent_meeting['date'] = convert_str_time_to_long(recent_meeting['date_str'])
+			recent_meeting['id'] = tds[1].text.encode('UTF-8')
+			recent_meeting['summary'] = tds[2].text.encode('UTF-8')
+			recent_meeting['content_url'] = tds[0].find('a')['href']
+
+			meettings.append(recent_meeting);
+
+	return meettings;
+
+#str_time : ex) 2015-07-15
+def convert_str_time_to_long(str_time):
+	d = datetime.datetime.strptime(str_time,'%Y-%m-%d');
+	return long(time.mktime(d.timetuple())) * 1000
+
+def get_recent_crawling_history_date():
+	recent_crawling_date = None;
+
+	#to update detact date-format 
+	for path in glob.glob(attend_meta['result_dir']+"/*"):
+		date = path.replace(attend_meta['result_dir']+"/",'')
+		date = convert_str_time_to_long(date);
+		
+		recent_crawling_date = recent_crawling_date if recent_crawling_date else date 
+		
+		if(recent_crawling_date < date):
+			recent_crawling_date = date; 
+
+	return recent_crawling_date;
+
+def get_target_meetings(crawling_start_date):
+	target_meetings = []
+	
+	for page_num in xrange(1,CRAWILING_THRESHOLD):
+		meetings = get_meetings_by_page_num(page_num)
+
+		if not meetings :
+			break;
+
+		if(crawling_start_date<meetings[0]['date']):
+			for meeting in meetings :
+				target_meetings.append(meeting)
+		else:
+			break;
+
+  	return target_meetings;
+
+def crawling_meeting_content(meeting_meta):
+
+	meeting_inform = dict(meta={},data=[]);
+	for key in meeting_meta :
+		meeting_inform['meta'][key] = meeting_meta[key]
+
+	cotent_url = meeting_inform['meta']['content_url'];
+	r = requests.get(cotent_url)
+	r.encoding = 'UTF-8'
+	soup = BeautifulSoup(r.text,'html.parser')
+	
+	tables = soup.findAll('table',attrs={'cellspacing':'0','border':'0','width':'750'})	
+
+	if len(tables) == 3:
+		lis = tables[2].findAll('li')
+		attend_data = dict();
+		for li in lis :
+			type_text = li.find('b').text
+			attend_data['type_name'] = type_text[:type_text.find(' ')]
+			attend_data['assemblies'] = [];
+			assembly_links = li.find('table').findAll('a')
+			for assembly_link in assembly_links :
+				href = assembly_link['href'];
+
+				assembly = dict()
+				id_start_idx = href.find('member_seq=')+len('member_seq=');
+				id_end_idx = href.find('&', id_start_idx);
+				
+				assembly['id'] = href[id_start_idx:id_end_idx] 
+				assembly['name'] = assembly_link.text.encode('UTF-8')
+				assembly['link'] = href
+				attend_data['assemblies'].append(assembly)
+		meeting_inform['data'].append(attend_data)
+
+		with open(attend_meta['result_dir']+"/"+meeting_inform['meta']['date_str'],'w') as outfile:
+			 json.dump(meeting_inform,outfile)
+
+
+def crawling_attend():
 	if not os.path.exists(attend_meta['result_dir']):
 		os.makedirs(attend_meta['result_dir'])
 
-	r = requests.get(attend_meta['crawling_url']+'1')
-	r.encoding = 'UTF-8'
-	soup = BeautifulSoup(r.text.encode('UTF-8'),'html.parser')
-	targetTable = soup.findAll('table',attrs={'class':'table_head1'})
+	recent_crawling_date = get_recent_crawling_history_date()
+	recent_meeting_date =get_recent_meeting_inform()['date']
 
-	if len(targetTable) > 2:
-		targetTable = targetTable[2];
-		print(targetTable);
-#		targetTable = targetTable[2].find('table',attrs={'class':'table_head1'}).find('table').find('tbody')
-#		print(targetTable)
-#		trs = targetTable.findAll('tr')		
-
-#		print(trs)
-#		if(len(trs)>0):
-#			recentDate = trs[0].findAll('td')[0].text
-#			print(recentDate)
-	#file_format
-	#[assembly_id]_[recent_date]_[count_id]
-#	d = datetime.datetime.strptime(date,'%Y-%m-%d')
-#	t = long(time.mktime(d.timetuple())) * 1000;
-
-
-#	for f in os.listdir(attend_meta['result_dir']):
-
-
-#	r = requests.get(attend_meta['assembly_id_src']);
-#	r.json();
+	#do crawling
+	if(recent_crawling_date < recent_meeting_date):	
+		meetings = get_target_meetings(recent_crawling_date)		
+		for m in meetings:
+			crawling_meeting_content(m)
 
 
 def get_assembly_by_id(assembly_id):
@@ -81,8 +190,7 @@ def get_assembly_by_id(assembly_id):
 
 
 def main():
-	init();
-#	get_assembly_by_id(115)
+	crawling_attend();
 
 if __name__ == '__main__':
 	main()
