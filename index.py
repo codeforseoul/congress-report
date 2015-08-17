@@ -26,18 +26,17 @@ def get_recent_meeting_inform():
 	recent_meeting['date_str'] = recent_meeting['date'] = recent_meeting['id'] = recent_meeting['summary'] = recent_meeting['content_url'] = None;
 
 	r = requests.get(attend_meta['crawling_list_url']+'1')
-	r.encoding = 'UTF-8'
-	soup = BeautifulSoup(r.text.encode('UTF-8'),'html.parser')
+	soup = BeautifulSoup(r.text,'html.parser')
 	targetTrs = soup.findAll('tr',attrs={'bgcolor':'#FFFFFF'})
 
 	if len(targetTrs) > 0 :
 		targetTr = targetTrs[0]
 		tds = targetTr.findAll('td');
 		if len(tds) == 3 :
-			recent_meeting['date_str'] = tds[0].text.encode('UTF-8').strip()
-			recent_meeting['date'] = convert_str_time_to_long(recent_meeting['date_str'])
-			recent_meeting['id'] = tds[1].text.encode('UTF-8')
-			recent_meeting['summary'] = tds[2].text.encode('UTF-8')
+			recent_meeting['date_str'] = tds[0].text.strip()
+			recent_meeting['date'] = convert_str_time_to_int(recent_meeting['date_str'])
+			recent_meeting['id'] = tds[1].text
+			recent_meeting['summary'] = tds[2].text
 			recent_meeting['content_url'] = tds[0].find('a')['href']
 
 
@@ -50,18 +49,17 @@ def get_meetings_by_page_num(page_num):
 	meettings = [];
 
 	r = requests.get(attend_meta['crawling_list_url']+str(page_num))
-	r.encoding = 'UTF-8'
-	soup = BeautifulSoup(r.text.encode('UTF-8'),'html.parser')
+	soup = BeautifulSoup(r.text,'html.parser')
 	targetTrs = soup.findAll('tr',attrs={'bgcolor':'#FFFFFF'})
 
 	for targetTr in targetTrs :
 		tds = targetTr.findAll('td');
 		if len(tds) == 3 :
 			recent_meeting = dict();
-			recent_meeting['date_str'] = tds[0].text.encode('UTF-8').strip()
-			recent_meeting['date'] = convert_str_time_to_long(recent_meeting['date_str'])
-			recent_meeting['id'] = tds[1].text.encode('UTF-8')
-			recent_meeting['summary'] = tds[2].text.encode('UTF-8')
+			recent_meeting['date_str'] = tds[0].text.strip()
+			recent_meeting['date'] = convert_str_time_to_int(recent_meeting['date_str'])
+			recent_meeting['id'] = tds[1].text
+			recent_meeting['summary'] = tds[2].text
 			recent_meeting['content_url'] = tds[0].find('a')['href']
 
 			meettings.append(recent_meeting);
@@ -69,17 +67,17 @@ def get_meetings_by_page_num(page_num):
 	return meettings;
 
 #str_time : ex) 2015-07-15
-def convert_str_time_to_long(str_time):
+def convert_str_time_to_int(str_time):
 	d = datetime.datetime.strptime(str_time,'%Y-%m-%d');
-	return long(time.mktime(d.timetuple())) * 1000
+	return int(time.mktime(d.timetuple())) * 1000
 
 def get_recent_crawling_history_date():
-	recent_crawling_date = None;
+	recent_crawling_date = 0;
 
 	#to update detact date-format 
 	for path in glob.glob(attend_meta['result_dir']+"/*"):
 		date = path.replace(attend_meta['result_dir']+"/",'')
-		date = convert_str_time_to_long(date);
+		date = convert_str_time_to_int(date);
 		
 		recent_crawling_date = recent_crawling_date if recent_crawling_date else date 
 		
@@ -91,7 +89,7 @@ def get_recent_crawling_history_date():
 def get_target_meetings(crawling_start_date):
 	target_meetings = []
 	
-	for page_num in xrange(1,CRAWILING_THRESHOLD):
+	for page_num in range(1,CRAWILING_THRESHOLD):
 		meetings = get_meetings_by_page_num(page_num)
 
 		if not meetings :
@@ -102,8 +100,7 @@ def get_target_meetings(crawling_start_date):
 				target_meetings.append(meeting)
 		else:
 			break;
-
-  	return target_meetings;
+	return target_meetings;
 
 def crawling_meeting_content(meeting_meta):
 
@@ -113,7 +110,6 @@ def crawling_meeting_content(meeting_meta):
 
 	cotent_url = meeting_inform['meta']['content_url'];
 	r = requests.get(cotent_url)
-	r.encoding = 'UTF-8'
 	soup = BeautifulSoup(r.text,'html.parser')
 	
 	tables = soup.findAll('table',attrs={'cellspacing':'0','border':'0','width':'750'})	
@@ -134,7 +130,7 @@ def crawling_meeting_content(meeting_meta):
 				id_end_idx = href.find('&', id_start_idx);
 				
 				assembly['id'] = href[id_start_idx:id_end_idx] 
-				assembly['name'] = assembly_link.text.encode('UTF-8')
+				assembly['name'] = assembly_link.text
 				assembly['link'] = href
 				attend_data['assemblies'].append(assembly)
 		meeting_inform['data'].append(attend_data)
@@ -167,9 +163,7 @@ def get_assembly_by_id(assembly_id):
 	while(1):
 		r = requests.get(attend_meta['crawling_url']+str(assembly_id)+"&page="+str(page))
 		page = page + 1;
-		r.encoding = 'UTF-8'
 		soup = BeautifulSoup(r.text,'html.parser')
-
 		targetTable = soup.find('table',attrs={'cellpadding':'5','cellspacing':'1','border':'0','width':'650'})
 
 		trs = targetTable.findAll('tr',attrs={'align':'center', 'bgcolor':'#FFFFFF'})
