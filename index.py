@@ -9,12 +9,17 @@ import os
 import datetime
 import time
 import glob
+import sys
+import pandas as pd
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 attend_meta = dict()
 attend_meta['result_dir'] = 'result';
 attend_meta['crawling_list_url'] = 'http://watch.peoplepower21.org/New/c_monitor_attend.php?page=';
 attend_meta['crawling_attend_url'] = 'http://watch.peoplepower21.org/New/c_monitor_attend_detail.php?meeting_seq=';
-attend_meta['assembly_id_src'] = ''
+attend_meta['assembly_list_url'] = 'http://watch.peoplepower21.org/New/search.php';
 attend_meta['target_id_set'] = [];
 
 #temporary value
@@ -110,14 +115,15 @@ def crawling_meeting_content(meeting_meta):
 
 	cotent_url = meeting_inform['meta']['content_url'];
 	r = requests.get(cotent_url)
+	r.encoding='utf-8';
 	soup = BeautifulSoup(r.text,'html.parser')
-	
+
 	tables = soup.findAll('table',attrs={'cellspacing':'0','border':'0','width':'750'})	
 
 	if len(tables) == 3:
 		lis = tables[2].findAll('li')
-		attend_data = dict();
 		for li in lis :
+			attend_data = dict();
 			type_text = li.find('b').text
 			attend_data['type_name'] = type_text[:type_text.find(' ')]
 			attend_data['assemblies'] = [];
@@ -130,10 +136,10 @@ def crawling_meeting_content(meeting_meta):
 				id_end_idx = href.find('&', id_start_idx);
 				
 				assembly['id'] = href[id_start_idx:id_end_idx] 
-				assembly['name'] = assembly_link.text
+				assembly['name'] = str(assembly_link.text)
 				assembly['link'] = href
 				attend_data['assemblies'].append(assembly)
-		meeting_inform['data'].append(attend_data)
+			meeting_inform['data'].append(attend_data)
 
 		with open(attend_meta['result_dir']+"/"+meeting_inform['meta']['date_str'],'w') as outfile:
 			 json.dump(meeting_inform,outfile)
@@ -183,8 +189,155 @@ def get_assembly_by_id(assembly_id):
 			json.dump(assembly_attend,outfile)		
 
 
+
+def get_all_of_assemblies():
+
+	assemblies = dict();
+
+	url = attend_meta['assembly_list_url'];
+	r = requests.get(url)
+	r.encoding='utf-8';
+	soup = BeautifulSoup(r.text,'html.parser')
+
+	expectedAssemblyLinks = soup.findAll('a');
+	for expectedAssemblyLink in expectedAssemblyLinks :
+		href = expectedAssemblyLink['href'];
+		if 'member_seq=' in href:
+			assembly = dict()
+			id_start_idx = href.find('member_seq=')+len('member_seq=');
+			assembly_text = expectedAssemblyLink.text;
+			assembly_title = expectedAssemblyLink['title'];
+
+			assembly_id = int(href[id_start_idx:]);
+			assembly_name = assembly_text[:assembly_text.find(' ')].strip()
+			assembly_party = assembly_title[:assembly_title.find('-')].strip()	
+
+			assemblies[assembly_id] = dict({
+				'name' : assembly_name,
+				'party' : assembly_party
+				});
+
+	return assemblies;
+
+#this must called after crawling_attend()
+def get_all_of_meet_dates():
+
+	dates = dict();
+
+	for path in glob.glob(attend_meta['result_dir']+"/*"):
+		date_str = path.replace(attend_meta['result_dir']+"/",'')
+		date = convert_str_time_to_int(date_str);
+		dates[date_str] = date;
+
+	return dates;
+
+def get_attend_result(meet_date, src_assembly):
+
+	result = '';
+	with open(attend_meta['result_dir']+"/"+meet_date,'r') as json_data:
+		meet_data = json.load(json_data);
+		for attend_data in meet_data['data']:
+			type_name = attend_data['type_name'].decode('utf-8').encode('utf-8'); 
+			assemblies = attend_data['assemblies'];
+			for assembly in assemblies:
+				assembly_id = int(assembly['id']);
+
+				#??? 'if assembly_id is src_assembly' why not working....
+				if assembly_id - src_assembly is 0:
+					result = type_name;
+					break;
+
+	return result;
+
+def analyze_assemblies_attend():
+	results = dict({
+			"results" : []
+			})
+	meet_dates = get_all_of_meet_dates();
+	assemblies = get_all_of_assemblies();
+
+	assembies_attend = dict()
+
+	for assembly_id in assemblies:
+		assembies_attend[assembly_id] = dict({
+			'date_raw' : dict(),
+			'meet_count':0,
+			'attend_count':0,
+			'attend_percent' : 0.0,
+			'attend_set' : dict()
+		});
+
+
+	for assembly_id in assembies_attend:
+		for meet_date in meet_dates:
+			assembies_attend[assembly_id]['date_raw'][meet_date] = get_attend_result(meet_date,assembly_id)
+
+
+	for assembly_id in assembies_attend:
+		assembly_attend = assembies_attend[assembly_id];
+		attend_count = 0;
+		meet_count = 0;
+		date_raw = assembly_attend['date_raw'];
+		attend_set = assembly_attend['attend_set'];
+		for meet_date in date_raw:
+			attend_type = date_raw[meet_date];
+			if len(attend_type) > 0:
+				meet_count+=1;
+
+				if attend_type not in attend_set:
+					attend_set[attend_type] = [];
+
+				attend_set[attend_type].append(meet_dates[meet_date])					
+			
+		attend_count = 0;		
+		attend_percent = 0;
+		if str(unicode('출석')) in attend_set:
+			attend_count = len(attend_set[str(unicode('출석'))]);				
+			attend_percent = float(attend_count)/float(meet_count)
+
+		assembly_attend['meet_count'] = meet_count;
+		assembly_attend['attend_count'] = attend_count;
+		assembly_attend['attend_percent'] = attend_percent;
+	
+		result_assembly = dict({
+			"assembly" : assemblies[assembly_id],
+			"attend_inform" : assembly_attend
+			});
+		result_assembly['assembly']['id'] = assembly_id;
+		results['results'].append(result_assembly);
+
+
+	results['results'] = sorted(results['results'], key=lambda k: k['attend_inform']['attend_percent'], reverse=True)
+	with open('assemblies_attend','w') as outfile:
+		json.dump(results,outfile)
+
 def main():
 	crawling_attend();
+	analyze_assemblies_attend();
 
 if __name__ == '__main__':
 	main()
+
+
+
+### important!!!! ###
+
+#r.encoding = 'utf-8'
+#
+#
+#   	r = requests.get(cotent_url)
+#		r.encoding='utf-8';
+#		soup = BeautifulSoup(r.text,'html.parser')
+
+#to read utf-8 encoding file
+#
+#	once 
+#		reload(sys)
+#		sys.setdefaultencoding('utf-8')	
+#
+#	after
+#	   txt.decode('utf-8').encode('utf-8')
+#
+#
+
+
