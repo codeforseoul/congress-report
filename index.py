@@ -1,19 +1,12 @@
-#-*- coding: UTF-8 -*-
-from bs4 import BeautifulSoup
-import requests
-import json
-import re
-import codecs
-import requests
-import os
 import datetime
-import time
 import glob
+import json
+import os
+import requests
 import sys
-import pandas as pd
+import time
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
+from bs4 import BeautifulSoup
 
 attend_meta = dict()
 attend_meta['result_dir'] = 'result';
@@ -31,6 +24,7 @@ def get_recent_meeting_inform():
     recent_meeting['date_str'] = recent_meeting['date'] = recent_meeting['id'] = recent_meeting['summary'] = recent_meeting['content_url'] = None;
 
     r = requests.get(attend_meta['crawling_list_url'] + '1')
+    r.encoding = 'utf-8'
     soup = BeautifulSoup(r.text, 'html.parser')
     targetTrs = soup.findAll('tr', attrs = {'bgcolor': '#FFFFFF'})
 
@@ -52,6 +46,7 @@ def get_meetings_by_page_num(page_num):
     meettings = [];
 
     r = requests.get(attend_meta['crawling_list_url'] + str(page_num))
+    r.encoding = 'utf-8'
     soup = BeautifulSoup(r.text, 'html.parser')
     targetTrs = soup.findAll('tr', attrs = {'bgcolor': '#FFFFFF'})
 
@@ -79,15 +74,15 @@ def get_recent_crawling_history_date():
 
     #to update detact date-format
     for path in glob.glob(attend_meta['result_dir'] + '/*'):
-        date = path.replace(attend_meta['result_dir'] + '/', '')
-        date = convert_str_time_to_int(date);
+        date = path.replace(attend_meta['result_dir'] + '/', '').replace('.json', '')
+        date = convert_str_time_to_int(date)
 
         recent_crawling_date = recent_crawling_date if recent_crawling_date else date
 
-        if(recent_crawling_date < date):
-            recent_crawling_date = date;
+        if (recent_crawling_date < date):
+            recent_crawling_date = date
 
-    return recent_crawling_date;
+    return recent_crawling_date
 
 def get_target_meetings(crawling_start_date):
     target_meetings = []
@@ -110,9 +105,9 @@ def crawling_meeting_content(meeting_meta):
     for key in meeting_meta:
         meeting_inform['meta'][key] = meeting_meta[key]
 
-    cotent_url = meeting_inform['meta']['content_url'];
-    r = requests.get(cotent_url)
-    r.encoding = 'utf-8';
+    content_url = meeting_inform['meta']['content_url'];
+    r = requests.get(content_url)
+    r.encoding = 'utf-8'
     soup = BeautifulSoup(r.text, 'html.parser')
 
     tables = soup.findAll('table', attrs = {'cellspacing': '0', 'border': '0', 'width': '750'})
@@ -139,10 +134,12 @@ def crawling_meeting_content(meeting_meta):
             meeting_inform['data'].append(attend_data)
 
         with open(attend_meta['result_dir']+ "/" +meeting_inform['meta']['date_str'] + ".json",'w') as outfile:
-             json.dump(meeting_inform,outfile)
+            json.dump(meeting_inform, outfile, ensure_ascii=False)
 
 
 def crawling_attend():
+    print('crawling_attend: start')
+
     if not os.path.exists(attend_meta['result_dir']):
         os.makedirs(attend_meta['result_dir'])
 
@@ -153,7 +150,10 @@ def crawling_attend():
     if(recent_crawling_date < recent_meeting_date):
         meetings = get_target_meetings(recent_crawling_date)
         for m in meetings:
+            print(m)
             crawling_meeting_content(m)
+
+    print('crawling_attend: complete')
 
 
 def get_assembly_by_id(assembly_id):
@@ -165,6 +165,7 @@ def get_assembly_by_id(assembly_id):
 
     while(1):
         r = requests.get(attend_meta['crawling_url']+str(assembly_id)+"&page="+str(page))
+        r.encoding = 'utf-8'
         page = page + 1;
         soup = BeautifulSoup(r.text,'html.parser')
         targetTable = soup.find('table',attrs={'cellpadding':'5','cellspacing':'1','border':'0','width':'650'})
@@ -183,7 +184,7 @@ def get_assembly_by_id(assembly_id):
             break;
 
         with open(attend_meta['result_dir']+ "/" + str(assembly_id) + ".json",'w') as outfile:
-            json.dump(assembly_attend,outfile)
+            json.dump(assembly_attend, outfile, ensure_ascii=False)
 
 
 
@@ -220,7 +221,7 @@ def get_all_of_meet_dates():
     dates = dict()
 
     for path in glob.glob(attend_meta['result_dir']+"/*"):
-        date_str = path.replace(attend_meta['result_dir']+"/",'')
+        date_str = path.replace(attend_meta['result_dir']+"/",'').replace('.json', '')
         date = convert_str_time_to_int(date_str);
         dates[date_str] = date;
 
@@ -232,7 +233,7 @@ def get_attend_result(meet_date, src_assembly):
     with open(attend_meta['result_dir']+ "/" + meet_date + ".json",'r') as json_data:
         meet_data = json.load(json_data);
         for attend_data in meet_data['data']:
-            type_name = attend_data['type_name'].decode('utf-8').encode('utf-8');
+            type_name = attend_data['type_name'];
             assemblies = attend_data['assemblies'];
             for assembly in assemblies:
                 assembly_id = int(assembly['id']);
@@ -286,8 +287,8 @@ def analyze_assemblies_attend():
 
         attend_count = 0;
         attend_percent = 0;
-        if str(unicode('출석')) in attend_set:
-            attend_count = len(attend_set[str(unicode('출석'))]);
+        if str('출석') in attend_set:
+            attend_count = len(attend_set[str('출석')]);
             attend_percent = float(attend_count)/float(meet_count)
 
         assembly_attend['meet_count'] = meet_count;
@@ -304,7 +305,7 @@ def analyze_assemblies_attend():
 
     results['results'] = sorted(results['results'], key=lambda k: k['attend_inform']['attend_percent'], reverse=True)
     with open('assemblies_attend','w') as outfile:
-        json.dump(results,outfile)
+        json.dump(results, outfile, ensure_ascii=False)
 
 def main():
     crawling_attend()
