@@ -67,7 +67,7 @@ def fetch_sessions(page):
     }
 
 
-def fetch_session(session_bill):
+def fetch_session_vote_results(session_bill):
     url = 'http://watch.peoplepower21.org/New/c_monitor_voteresult_detail.php?mbill=%d' % session_bill
     res = requests.get(url)
     res.encoding = 'utf-8'
@@ -88,10 +88,7 @@ def fetch_session(session_bill):
                 'members': _members
             })
 
-    return {
-        'bill': session_bill,
-        'vote_results': results
-    }
+    return results
 
 
 def _get_dump_file_path(session_bill, session_date):
@@ -110,7 +107,9 @@ def crawl_all_sessions():
         for session in sessions:
             session_bill = session['bill']
             session_date = session['처리날짜']
+            session_index = session['회차']
             session_subject = session['의안명']
+            session_result = session['결과']
 
             dump_file_path = _get_dump_file_path(session_bill, session_date)
             if os.path.exists(dump_file_path):
@@ -119,9 +118,20 @@ def crawl_all_sessions():
 
             print('%s.%d %s start' % (session_date, session_bill, session_subject))
 
-            session_ret = fetch_session(session_bill)
+            session_vote_results = fetch_session_vote_results(session_bill)
+
+            # 추가 정보
+            session_details = {
+                'bill': session_bill,
+                '처리날짜': session_date,
+                '회차': session_index,
+                '의안명': session_subject,
+                '결과': session_result,
+                'vote_results': session_vote_results
+            }
+
             with open(dump_file_path, 'w') as out_file:
-                json.dump(session_ret, out_file, ensure_ascii=False, sort_keys=False, indent=4)
+                json.dump(session_details, out_file, ensure_ascii=False, sort_keys=False, indent=4)
 
             print('%s out' % dump_file_path)
 
