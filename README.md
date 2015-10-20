@@ -8,5 +8,5 @@
 - 19대 지역구 의원 정보: [팀포퐁](http://data.popong.com/)
 
 ## 관련 소스 코드
-- [국회 성적표 웹페이지](congress-report-web)
-- [국회 성적표 메일러](conress-report-mailer)
+- [국회 성적표 웹페이지](https://githubcom/codeforseoul/congress-report-web)
+- [국회 성적표 메일러](https://githubcom/codeforseoul/conress-report-mailer)
