@@ -6,3 +6,7 @@
 ## 데이터 출처
 - 본회의 및 상임위원회 출결/표결 현황: [열려라 국회](http://watch.peoplepower21.org/)
 - 19대 지역구 의원 정보: [팀포퐁](http://data.popong.com/)
+
+## 관련 소스 코드
+- [국회 성적표 웹페이지](congress-report-web)
+- [국회 성적표 메일러](conress-report-mailer)
