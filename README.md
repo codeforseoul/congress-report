@@ -1,6 +1,7 @@
 # 국회 성적표(가제) // Congress Report
 
 [![Join the chat at https://gitter.im/codeforseoul/congress-report](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/codeforseoul/congress-report?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 내가 뽑은 국회의원의 성적표를 받아보세요! 우리 지역구 의원은 맡은바 소임을 다하고 있을까요? 아니면 선거 때 말만 해놓고 일은 뒷전일까요?
 
 ## 개발
