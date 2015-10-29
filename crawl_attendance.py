@@ -9,7 +9,7 @@ import time
 from bs4 import BeautifulSoup
 
 attend_meta = dict()
-attend_meta['result_dir'] = 'result';
+attend_meta['result_dir'] = 'attendance_results';
 attend_meta['crawling_list_url'] = 'http://watch.peoplepower21.org/New/c_monitor_attend.php?page=';
 attend_meta['crawling_attend_url'] = 'http://watch.peoplepower21.org/New/c_monitor_attend_detail.php?meeting_seq=';
 attend_meta['assembly_list_url'] = 'http://watch.peoplepower21.org/New/search.php';
@@ -127,7 +127,7 @@ def crawling_meeting_content(meeting_meta):
                 id_start_idx = href.find('member_seq=') + len('member_seq=')
                 id_end_idx = href.find('&', id_start_idx);
 
-                assembly['id'] = href[id_start_idx:id_end_idx]
+                assembly['idx'] = int(href[id_start_idx:id_end_idx])
                 assembly['name'] = str(assembly_link.text)
                 assembly['link'] = href
                 attend_data['assemblies'].append(assembly)
@@ -236,10 +236,10 @@ def get_attend_result(meet_date, src_assembly):
             type_name = attend_data['type_name'];
             assemblies = attend_data['assemblies'];
             for assembly in assemblies:
-                assembly_id = int(assembly['id']);
+                assembly_idx = int(assembly['idx']);
 
                 #??? 'if assembly_id is src_assembly' why not working....
-                if assembly_id - src_assembly is 0:
+                if assembly_idx - src_assembly is 0:
                     result = type_name;
                     break;
 
@@ -304,7 +304,7 @@ def analyze_assemblies_attend():
 
 
     results['results'] = sorted(results['results'], key=lambda k: k['attend_inform']['attend_percent'], reverse=True)
-    with open('assemblies_attend','w') as outfile:
+    with open('assemblies_attend.json','w') as outfile:
         json.dump(results, outfile, ensure_ascii=False)
 
 def main():

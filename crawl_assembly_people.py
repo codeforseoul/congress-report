@@ -57,7 +57,7 @@ def append_additional_idxs(popong_data_dump):
         result_data = member.copy()
         result_data['popong_idx'] = popong_idx
         result_data['assembly_idx'] = assembly_idx
-        result_data['open_assembly_idx'] = open_assembly_idx
+        result_data['idx'] = open_assembly_idx # primary idx
 
         result_dataset.append(result_data)
 
@@ -76,5 +76,5 @@ if __name__ == '__main__':
     popong_data_dump = fetch_popong_data_dump()
     assembly_people_data = append_additional_idxs(popong_data_dump)
     with open('assembly_people.json', 'w', encoding='utf-8') as out_file:
-        json.dump(assembly_people_data, out_file)
+        json.dump(assembly_people_data, out_file, ensure_ascii=False)
     print('complete')

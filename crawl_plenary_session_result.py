@@ -6,7 +6,7 @@ import requests
 
 from bs4 import BeautifulSoup
 
-DUMP_DIR = 'plenary_sessions'
+DUMP_DIR = 'plenary_session_results'
 
 go_to_page_regex = re.compile(r'javascript:goToPage\((\d+)\);')
 mbill_regex = re.compile(r'mbill=(\d+)"')
@@ -85,7 +85,7 @@ def fetch_session_vote_results(session_bill):
         _members = list(map(lambda x: int(x), member_seq_regex.findall(str(_tds[1]))))
         results.append({
                 'type': _type,
-                'members': _members
+                'member_idxs': _members
             })
 
     return results
