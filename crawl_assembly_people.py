@@ -71,10 +71,13 @@ def fetch_popong_data_dump():
     res.encoding = 'utf-8'
     return res.json()
 
-
-if __name__ == '__main__':
+def run():
     popong_data_dump = fetch_popong_data_dump()
     assembly_people_data = append_additional_idxs(popong_data_dump)
     with open('assembly_people.json', 'w', encoding='utf-8') as out_file:
-        json.dump(assembly_people_data, out_file, ensure_ascii=False)
+        json.dump(assembly_people_data, out_file, ensure_ascii=True)
     print('complete')
+
+
+if __name__ == '__main__':
+    run()

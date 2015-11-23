@@ -95,7 +95,7 @@ def _get_dump_file_path(session_bill, session_date):
     return '%s/%s.%d.json' % (DUMP_DIR, session_date, session_bill)
 
 
-def crawl_all_sessions():
+def run():
     if not os.path.exists(DUMP_DIR):
         os.makedirs(DUMP_DIR)
 
@@ -130,8 +130,8 @@ def crawl_all_sessions():
                 'vote_results': session_vote_results
             }
 
-            with open(dump_file_path, 'w') as out_file:
-                json.dump(session_details, out_file, ensure_ascii=False, sort_keys=False, indent=4)
+            with open(dump_file_path, 'w', encoding='utf-8') as out_file:
+                json.dump(session_details, out_file, ensure_ascii=True, sort_keys=False, indent=4)
 
             print('%s out' % dump_file_path)
 
@@ -141,4 +141,4 @@ def crawl_all_sessions():
 
 
 if __name__ == '__main__':
-    crawl_all_sessions()
+    run()

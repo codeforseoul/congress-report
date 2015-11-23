@@ -118,7 +118,7 @@ def crawling_meeting_content(meeting_meta):
             attend_data = dict();
             type_text = li.find('b').text
             attend_data['type_name'] = type_text[:type_text.find(' ')]
-            attend_data['assemblies'] = [];
+            attend_data['members'] = [];
             assembly_links = li.find('table').findAll('a')
             for assembly_link in assembly_links :
                 href = assembly_link['href']
@@ -130,7 +130,7 @@ def crawling_meeting_content(meeting_meta):
                 assembly['idx'] = int(href[id_start_idx:id_end_idx])
                 assembly['name'] = str(assembly_link.text)
                 assembly['link'] = href
-                attend_data['assemblies'].append(assembly)
+                attend_data['members'].append(assembly)
             meeting_inform['data'].append(attend_data)
 
         with open(attend_meta['result_dir']+ "/" +meeting_inform['meta']['date_str'] + ".json",'w') as outfile:
@@ -234,28 +234,28 @@ def get_attend_result(meet_date, src_assembly):
         meet_data = json.load(json_data);
         for attend_data in meet_data['data']:
             type_name = attend_data['type_name'];
-            assemblies = attend_data['assemblies'];
-            for assembly in assemblies:
-                assembly_idx = int(assembly['idx']);
+            members = attend_data['members'];
+            for member in members:
+                member_idx = int(member['idx']);
 
                 #??? 'if assembly_id is src_assembly' why not working....
-                if assembly_idx - src_assembly is 0:
+                if member_idx - src_assembly is 0:
                     result = type_name;
                     break;
 
     return result;
 
-def analyze_assemblies_attend():
+def analyze_members_attend():
     results = dict({
             "results" : []
             })
     meet_dates = get_all_of_meet_dates();
-    assemblies = get_all_of_assemblies();
+    members = get_all_of_members();
 
-    assembies_attend = dict()
+    members_attend = dict()
 
-    for assembly_id in assemblies:
-        assembies_attend[assembly_id] = dict({
+    for member_id in memberrs:
+        members_attend[member_id] = dict({
             'date_raw' : dict(),
             'meet_count': 0,
             'attend_count': 0,
