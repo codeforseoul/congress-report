@@ -38,6 +38,10 @@ def execute_crawl_and_backup():
 
 def schedule_job():
     logging.info('schedule_job start')
+
+    # run once first
+    execute_crawl_and_backup()
+
     schedule.every().day.at('10:00').do(execute_crawl_and_backup)
 
     while True:
