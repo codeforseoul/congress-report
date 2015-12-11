@@ -3,14 +3,16 @@ import json
 import os
 import re
 import requests
+import path_config
 
 from bs4 import BeautifulSoup
 
-DUMP_DIR = 'plenary_session_results'
+DATA_DIR = path_config.get_data_dir_path('plenary_session_results')
 
 go_to_page_regex = re.compile(r'javascript:goToPage\((\d+)\);')
 mbill_regex = re.compile(r'mbill=(\d+)"')
 member_seq_regex = re.compile(r'member_seq=(\d+)&')
+
 
 def _compute_has_next(html, cur_page):
     has_next = False
@@ -92,12 +94,11 @@ def fetch_session_vote_results(session_bill):
 
 
 def _get_dump_file_path(session_bill, session_date):
-    return '%s/%s.%d.json' % (DUMP_DIR, session_date, session_bill)
+    return '%s/%s.%d.json' % (DATA_DIR, session_date, session_bill)
 
 
 def run():
-    if not os.path.exists(DUMP_DIR):
-        os.makedirs(DUMP_DIR)
+    path_config.create_dirs(DATA_DIR)
 
     page_no = 1
     while True:

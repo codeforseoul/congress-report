@@ -4,6 +4,7 @@ import datetime
 import time
 import os
 import json
+import path_config
 
 ASSEMBLY_LIST_URL = "http://watch.peoplepower21.org/New/search.php"
 
@@ -27,7 +28,7 @@ ATTEND_SUB_MEETING = "http://watch.peoplepower21.org/New/cm_info_act_sAttend.php
 CRAWILING_THRESHOLD = 100
 
 # save result file path
-RESULT_PATH = "attendance_results"
+RESULT_PATH = path_config.get_data_dir_path('attendance_results')
 
 
 # str_time : ex) 2015-07-15
@@ -108,7 +109,7 @@ def updateToDateAssemblyFile(assemblyId, mAttends, sAttends):
         with open(filename, 'r') as assemblyFile:
             assemblyData = json.loads(assemblyFile.read())
     else:
-        assemblyData['assembly_id'] = assemblyId
+        assemblyData['member_idx'] = assemblyId
         assemblyData['main_attend'] = []
         assemblyData['sub_attend'] = []
 
@@ -147,8 +148,8 @@ def getRecentAssemblyData(assemblyId):
     return recent
 
 
-def getAllAssemblyId():
-    assemblyIdList = []
+def fetch_members_idxs():
+    member_idxs = []
 
     url = ASSEMBLY_LIST_URL
     r = requests.get(url)
@@ -161,26 +162,28 @@ def getAllAssemblyId():
     for assemblyTag in assemblyTags:
         href = assemblyTag['href']
         startIdx = href.find('member_seq=')+len('member_seq=')
-        assemblyIdList.append(int(href[startIdx:]))
+        member_idxs.append(int(href[startIdx:]))
 
-    return assemblyIdList
+    return member_idxs
 
 
 def run():
-    if not os.path.exists(RESULT_PATH):
-        os.makedirs(RESULT_PATH)
+    path_config.create_dirs(RESULT_PATH)
 
-    assemblyIdList = getAllAssemblyId()
-    for assemblyId in assemblyIdList:
-
-        recentDates = getRecentAssemblyData(assemblyId)
+    print('begin')
+    member_idxs = fetch_members_idxs()
+    for member_idx in member_idxs:
+        print('getting assembly data, member idx: %d' % member_idx)
+        recentDates = getRecentAssemblyData(member_idx)
 
         mAttends = refreshAttedingInfoMainMeeting(
-            recentDates['main_attend'], assemblyId)
+            recentDates['main_attend'], member_idx)
         sAttends = refreshAttedingInfoSubMeeting(
-            recentDates['sub_attend'], assemblyId)
+            recentDates['sub_attend'], member_idx)
 
-        updateToDateAssemblyFile(assemblyId, mAttends, sAttends)
+        updateToDateAssemblyFile(member_idx, mAttends, sAttends)
+        print('complete')
+    print('end')
 
 if __name__ == '__main__':
     run()

@@ -1,16 +1,18 @@
 """
 https://github.com/teampopong/data-assembly에서 assembly.json 데이터를 가져오고
 popong api 호출을 위한 popong_idx, 국회 idx, 참여연대 idx를 추가해서
-'assembly_people.json'으로 저장
+'assembly_members.json'으로 저장
 """
 import json
 import re
 import requests
+import path_config
 
 from datetime import datetime
 
 assembly_idx_regex = re.compile(r'dept_cd=([0-9]+)')
 open_assembly_idx_regex = re.compile(r'member_seq=([0-9]+)')
+
 
 def find_popong_idx(name, birthday):
     url = 'http://api.popong.com/v0.1/person/search?q=%s&api_key=test' % name
@@ -47,17 +49,14 @@ def append_additional_idxs(popong_data_dump):
         birthday = member['birth']
         birthday_date = datetime.strptime(birthday, '%Y-%m-%d').date()
 
-        try:
-            popong_idx = find_popong_idx(name, birthday_date)
-            assembly_idx = find_assembly_idx(popong_data_dump, name, birthday_date)
-            open_assembly_idx = find_open_assembly_idx(name, birthday_date)
-        except:
-            print('%s has error' % name)
+        popong_idx = find_popong_idx(name, birthday_date)
+        assembly_idx = find_assembly_idx(popong_data_dump, name, birthday_date)
+        open_assembly_idx = find_open_assembly_idx(name, birthday_date)
 
         result_data = member.copy()
         result_data['popong_idx'] = popong_idx
         result_data['assembly_idx'] = assembly_idx
-        result_data['idx'] = open_assembly_idx # primary idx
+        result_data['idx'] = open_assembly_idx  # primary idx
 
         result_dataset.append(result_data)
 
@@ -71,11 +70,17 @@ def fetch_popong_data_dump():
     res.encoding = 'utf-8'
     return res.json()
 
+
 def run():
+    path_config.create_dirs(path_config.get_container_dir_path())
+
     popong_data_dump = fetch_popong_data_dump()
-    assembly_people_data = append_additional_idxs(popong_data_dump)
-    with open('assembly_people.json', 'w', encoding='utf-8') as out_file:
-        json.dump(assembly_people_data, out_file, ensure_ascii=True)
+    assembly_members_data = append_additional_idxs(popong_data_dump)
+
+    dump_file_path = path_config.get_single_file_path('assembly_members.json')
+
+    with open(dump_file_path, 'w', encoding='utf-8') as out_file:
+        json.dump(assembly_members_data, out_file, ensure_ascii=True)
     print('complete')
 
 
