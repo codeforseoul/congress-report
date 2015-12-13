@@ -1,5 +1,5 @@
 """
-매 오전 10:00에 crawl_*.py 스크립트를 실행하고, 크롤링된 데이터를 몽고DB에 저장함
+매주 월요일 오전 10:00에 crawl_*.py 스크립트를 실행하고, 크롤링된 데이터를 몽고DB에 저장함
 """
 import schedule
 import time
@@ -42,7 +42,7 @@ def schedule_job():
     # run once first
     execute_crawl_and_backup()
 
-    schedule.every().day.at('10:00').do(execute_crawl_and_backup)
+    schedule.every().monday.at('10:00').do(execute_crawl_and_backup)
 
     while True:
         schedule.run_pending()
