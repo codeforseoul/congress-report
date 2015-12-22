@@ -1,5 +1,6 @@
 """
-매주 월요일 오전 10:00에 crawl_*.py 스크립트를 실행하고, 크롤링된 데이터를 몽고DB에 저장함
+매주 월요일 오전 10:00에 crawl_*.py 스크립트를 실행하고, 크롤링된 데이터를 몽고DB에 저장하고,
+변경된 데이터를 git repository에 push함
 """
 import schedule
 import time
@@ -8,7 +9,9 @@ import sys
 from datetime import datetime
 import logging
 
+
 logging.basicConfig(format='[%(asctime)s] %(levelname)s : %(message)s', level=logging.INFO)
+
 
 def _run_script(python_file):
     logging.info('[%s] run %s script' % (datetime.now().isoformat(), python_file))
@@ -34,6 +37,9 @@ def run_crawl_scripts():
 def execute_crawl_and_backup():
     run_crawl_scripts()
     _run_script('mongo_dump')
+
+    time.sleep(1)
+    _run_script('git_dump')
 
 
 def schedule_job():
