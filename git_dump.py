@@ -53,11 +53,11 @@ def push_to_origin():
     logging.info('pushed to origin')
 
 
-def dump():
+def run():
     init_and_pull_repo()
     update_repo_data()
     push_to_origin()
 
 
 if __name__ == '__main__':
-    dump()
+    run()
