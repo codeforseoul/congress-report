@@ -7,7 +7,7 @@ import datetime
 
 logging.basicConfig(format='[%(asctime)s] %(levelname)s : %(message)s', level=logging.INFO)
 
-ORIGIN_URI = 'git@github.com:appetizermonster/data.git'
+ORIGIN_URI = 'git@github.com:codeforseoul/data.git'
 REPO_DIR = 'git_dump_repo'
 REPO_DATA_DIR = 'congress-report'
 DATA_DIR = 'data'
